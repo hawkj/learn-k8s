@@ -139,6 +139,13 @@ Image: "learn-api:local" with ID "sha256:…" not yet present on node "learn-con
 | **`learn-control-plane`** | 即 `kubectl get nodes` 里的控制面节点，单节点集群时通常只有这一台。 |
 | **`kind load` 会不会创建 Node？** | **不会。** 只向**已有** Node 导入镜像；创建 Node 的是 `kind create cluster`（及多节点时的配置文件）。 |
 
+**复习：Kubernetes 里的 Node 指什么**
+
+- **Node（节点）**：集群里**真正跑负载**的那一层；每台 Node 上跑 **kubelet** 和**容器运行时**（如 containerd），**Pod 被调度到某个 Node 上**，在该 Node 里拉起容器。
+- **`kubectl get nodes`**：每一行就是一个 Node；**`NAME`** 是节点名（如 `learn-control-plane`），**`ROLES`** 里 **`control-plane`** 表示控制面节点（跑 API Server、etcd 等）；纯工作节点该列常为**空**或显示 `none`（视 kubectl 版本而定）。
+- **与 Pod 的关系**：Pod 属于「集群 API 里的工作单元」；**必须落在某个 Node 上**（同一 Pod 内的容器不会拆到两台 Node）。一个 Node 上可以有**多个** Pod。
+- **与 kind 的关系**：在 kind 里，Node 在物理上常对应 **宿主机 Docker 里的一个「节点」容器**；控制面与数据面在概念上仍是 Node，只是实现方式与云上的虚拟机不同。宿主机 Docker → Node 容器 → Pod → 容器的层次图见 [第 0 章「图示：kind 下的 Pod、Node 与宿主机」](./chapter-00.md)。
+
 可用 `kubectl get nodes` 确认 Node 在 `kind load` 前后都存在；命令结束且无报错即表示导入完成。
 
 ---
