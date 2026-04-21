@@ -59,16 +59,41 @@ docker run --rm -p 8080:8080 learn-api:local
 curl -s localhost:8080/healthz
 ```
 
-**若 `go mod download` 报 `proxy.golang.org` / `i/o timeout`**：构建容器内默认访问 Google 的 Go 模块代理与校验库，部分网络下会超时。可在 **`learn-api` 目录**用下面命令构建（与 `Dockerfile` 中 `ARG`/`ENV` 对应）：
+**若 `go mod download` 仍超时**：本仓库 `Dockerfile` 默认已设为 **`GOPROXY=https://goproxy.cn,https://proxy.golang.org,direct`**（先试国内镜像再回退官方）、**`GOSUMDB=sum.golang.google.cn`**，一般可直接 `docker build ... .`。若仍失败，先读下面 **`--no-cache`**，再考虑换 `build-arg`。
+
+**`docker build --no-cache`（禁用构建缓存）**
+
+| 项 | 说明 |
+|----|------|
+| **作用** | 本次构建**不使用**此前成功构建留下的中间镜像层，每条 `RUN`/`COPY` 等都会重新执行。 |
+| **何时需要** | ① 改过 `Dockerfile`（尤其 `ARG`/`ENV`、`RUN go mod download` 前后）但构建仍像在用旧代理或旧逻辑；② 某一步曾失败，之后改了网络或 `Dockerfile`，却看到日志里该步附近大量 **`Using cache`**，怀疑缓存「锁」住了错误环境；③ 需要与 CI 做一次**干净、可复现**的完整构建时。 |
+| **代价** | 构建时间变长（依赖会重新下载、编译会重跑）。 |
+
+在 **`learn-api` 目录**示例（其余 `-t`、`-f`、末尾 `.` 与平常一致，只多一个标志）：
+
+```bash
+docker build --no-cache -t learn-api:local -f Dockerfile .
+```
+
+**backend 镜像**同理：`docker build --no-cache -t learn-backend:local -f Dockerfile.backend .`（标签名以你实际为准）。
+
+仍不行时可显式换代理（与 `Dockerfile` 中 `ARG` 对应）：
 
 ```bash
 docker build -t learn-api:local -f Dockerfile \
-  --build-arg GOPROXY=https://goproxy.cn,direct \
+  --build-arg GOPROXY=https://goproxy.io,direct \
   --build-arg GOSUMDB=sum.golang.google.cn \
   .
 ```
 
-也可换 `https://goproxy.io,direct` 等镜像；能直连官方代理时不必加参数。
+必须用官方源时：
+
+```bash
+docker build -t learn-api:local -f Dockerfile \
+  --build-arg GOPROXY=https://proxy.golang.org,direct \
+  --build-arg GOSUMDB=sum.golang.org \
+  .
+```
 
 **`docker build` 说明**：`-t learn-api:local` 给镜像起名并打标签（`仓库名:标签`，`local` 表示本机构建）；`-f Dockerfile` 指定 Dockerfile；最后的 **`.`** 是**构建上下文**路径，`COPY` 只能引用该目录（及子目录）里的文件。
 
@@ -98,8 +123,28 @@ minikube image load learn-api:local
 
 ---
 
-### 2.2 .dockerignore
+### 2.2 `kind load` 提示：`not yet present on node … loading`
+
+执行 `kind load docker-image …` 时，可能看到类似输出：
+
+```text
+Image: "learn-api:local" with ID "sha256:…" not yet present on node "learn-control-plane", loading...
+```
+
+**这是正常现象。** 含义不是「集群里没有 Node」，而是：**名为 `learn-control-plane` 的 Node 上已经存在（由 `kind create cluster` 创建），但该 Node 的容器运行时镜像库里还没有 `learn-api:local`，kind 正在把本机 Docker 中的镜像导入这台已有 Node。**
+
+| 容易误解的点 | 说明 |
+|--------------|------|
+| **`not yet present on node`** | 指 **镜像**尚未在该 **Node** 上，不是「没有 Node」。 |
+| **`learn-control-plane`** | 即 `kubectl get nodes` 里的控制面节点，单节点集群时通常只有这一台。 |
+| **`kind load` 会不会创建 Node？** | **不会。** 只向**已有** Node 导入镜像；创建 Node 的是 `kind create cluster`（及多节点时的配置文件）。 |
+
+可用 `kubectl get nodes` 确认 Node 在 `kind load` 前后都存在；命令结束且无报错即表示导入完成。
+
+---
+
+### 2.3 .dockerignore
 
 **要点**：缩小构建上下文、加快 `docker build`，避免把 `.git`、无关文件打进 context。
 
-**练习 2.2**：对比 `docker build` 时 “Sending build context” 大小；在 `learn-api/.dockerignore` 中增加大目录忽略后再次构建，体积应减小或构建更快。
+**练习 2.3**：对比 `docker build` 时 “Sending build context” 大小；在 `learn-api/.dockerignore` 中增加大目录忽略后再次构建，体积应减小或构建更快。
