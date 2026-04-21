@@ -93,7 +93,9 @@ minikube 也会给你「一个本地集群」，但 Node 的实现方式与 kind
 
 ### 0.3 命名约定
 
+**命名空间（Namespace）是做什么的**：在同一个集群里，再划出一层 **逻辑边界**。多数名字（Deployment、Service、ConfigMap 等）**只在某个命名空间内唯一**，不同命名空间可以同名资源互不冲突。它还常作为 **权限（RBAC）、资源配额（ResourceQuota）、网络策略** 等作用范围，便于按团队或环境（如 `dev` / `prod`）分租。**默认**命名空间是 `default`；系统组件多在 `kube-system` 等空间里。本教程把示例都放在 **`demo`**，与生产/系统空间分开，避免误操作。
+
 - **命名空间**：下文默认 `demo`（与 `deploy/k8s/demo/namespace.yaml` 一致）
 - **镜像标签**：生产常用 **git commit 短 SHA**；本地可用 `local`
 
-**练习 0.3**：执行 `kubectl apply -f deploy/k8s/demo/namespace.yaml`，或 `kubectl create namespace demo`，后续命令统一加 `-n demo`。
+**练习 0.3**：执行 `kubectl apply -f deploy/k8s/demo/namespace.yaml`，或 `kubectl create namespace demo`，后续命令统一加 `-n demo`（表示操作对象是 **`demo` 命名空间里的资源**）。
