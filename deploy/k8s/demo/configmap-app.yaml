@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: learn-config
+  namespace: demo
+data:
+  LOG_LEVEL: "info"

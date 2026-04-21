@@ -1,0 +1,20 @@
+# 第 9 章：仅允许来自 app=api 的 Pod 访问 backend 8080（需集群 CNI 支持 NetworkPolicy）
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-allow-from-api
+  namespace: demo
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api
+      ports:
+        - protocol: TCP
+          port: 8080
