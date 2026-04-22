@@ -17,3 +17,25 @@ jobs:
         with:
           go-version: "1.22"
       - run: go test ./...
+
+  image:
+    name: Build and push learn-api
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker build and push
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${OWNER_LC}/learn-api:${{ github.sha }}"
+          docker build -t "${IMAGE}" -f learn-api/Dockerfile learn-api
+          docker push "${IMAGE}"
